@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# X-Key
 
-## Getting Started
+사내 공용 계정 저장소. Next.js App Router + TypeScript + Supabase Postgres.
+작은 서비스지만 계정 편집·인증이 중심이므로 Astro보다 Next.js로 구성했습니다.
+별도 VM 운영 없이 Vercel 등 Next.js 서버 기능을 지원하는 호스팅에 배포합니다.
+정적 파일만 올리는 호스팅에는 그대로 배포할 수 없습니다.
 
-First, run the development server:
+## 로컬 실행
 
-```bash
+```sh
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 · 관리자 /admin
+환경변수가 없는 개발 환경에서는 **메모리 데모 모드**입니다.
+실제 회사 비밀번호를 입력하지 마세요. 서버 재시작 시 변경이 초기화됩니다.
+- 관리자: `admin / admin` (최초 로그인 후 8자 이상 비밀번호로 변경)
+- 구성원: `XKEY-TEAM-DEMO` (공개 전용)
+- 경영진: `XKEY-EXEC-DEMO` (비공개 포함)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase 연결
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Supabase 프로젝트를 만들고 `supabase/migrations/001_vault.sql`을 SQL Editor에서 실행합니다.
+2. `.env.example`을 `.env.local`로 복사합니다.
+3. `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 입력합니다.
+4. `openssl rand -hex 32`로 만든 값을 `VAULT_ENCRYPTION_KEY`에 입력합니다.
+5. 개발 서버를 재시작하고 /admin에서 `admin / admin`으로 로그인하여 변경합니다.
+6. 계정을 등록하고 접근 코드를 발급해 각각 대상자에게 전달합니다.
 
-## Learn More
+서비스 역할 키와 암호화 키는 서버 전용입니다. NEXT_PUBLIC_ 접두어를 붙이지 마세요.
+암호화 키는 안전하게 별도 보관해야 하며, 잃어버리거나 바꾸면 기존 비밀값을 읽을 수 없습니다.
+프로덕션은 환경변수 없이 데모 모드로 전환되지 않습니다.
 
-To learn more about Next.js, take a look at the following resources:
+## 동작
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 공개 전용 / 비공개 포함 코드, 생성 시점부터 7일 만료. 원문은 발급 직후 한 번만 표시.
+- 만료 시 기존 코드를 연장하지 않고 새 코드 발급. 필요 시 이전 코드 삭제.
+- 코드 삭제 시 연결된 세션 삭제. 매 API 요청마다 코드의 권한·만료 확인.
+- 목록은 1분마다, 브라우저 포커스를 얻을 때 갱신. 이미 내려받은 정보는 회수 불가.
+- 계정 추가·수정·삭제, 분류 입력, 공개 여부 토글, 메모, 검색·필터.
+- 필터된 목록 CSV: BOM, CSV 이스케이프, 수식 주입 방지, 한국 날짜 파일명.
+- CSV에는 비밀값이 포함됩니다. 권한 내 계정만 내보냅니다.
+- 비밀값 AES-256-GCM 암호화. 접근 코드 SHA-256 해시, 관리자 bcrypt.
+- HttpOnly/SameSite 쿠키, 요청 Origin 검사. 관리자 8시간, 열람은 코드 만료까지.
+- 최초 관리자 변경 전 관리 기능 차단. 변경 시 다른 관리자 세션 종료.
+- 로그인/코드 입력 경로별 15분에 10회 제한(DB 원자적 카운터).
+  작은 사내용 전역 제한이므로 사용자가 많으면 IP별 게이트웨이 제한으로 교체하세요.
+- DB 테이블 RLS 활성화, anon/authenticated 직접 접근 금지. 서버 API만 서비스 역할로 접근.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 배포
 
-## Deploy on Vercel
+Vercel 등에 이 폴더를 Next.js 프로젝트로 등록하고 같은 3개 환경변수를 설정합니다.
+**공유 전에 관리자가 먼저 초기 비밀번호를 변경하세요.** 누구나 아는 초기 비밀번호 상태로
+공개해 두면 다른 사람이 먼저 관리자 계정을 사용할 수 있습니다.
+프로젝트 외부 회원가입이나 별도 서버 설치는 필요 없습니다.
+Supabase Auth 대신 단일 관리자와 공유 코드용 세션을 직접 관리하는 구조입니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 검증
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```sh
+npm run build
+npm run test
+```
+
+암호화/CSV 로직 테스트 포함. API 경계 테스트는 새 데모 서버에 대해
+`XKEY_TEST_URL=http://localhost:3100 npm test`로 실행합니다. 관리자 비밀번호를
+테스트용으로 변경하므로 실행 후 서버를 재시작하세요. 환경변수 없는 서버에서만 실행하세요.
+권한 분리, 최초 변경 강제, 7일 유효기간, 코드 삭제에 따른 세션 차단을 검증합니다. 실제 Supabase 연결 검증은 프로젝트 환경변수 설정 후 필요합니다.
