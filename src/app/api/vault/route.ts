@@ -54,7 +54,7 @@ export async function POST(req:NextRequest) {
  if(identity.must_change)return json({error:'먼저 관리자 비밀번호를 변경해 주세요.'},403);
  if(action==='save-account') {
  const input=body.account||{};
- const a={category:String(input.category||'').trim(),name:String(input.name||'').trim(),url:String(input.url||'').trim(),username:String(input.username||''),secret:String(input.secret||''),kind:input.kind==='api_key'?'api_key':'password',public:input.public===true,memo:String(input.memo||''),updated_at:new Date().toISOString()};
+ const a={category:String(input.category||'').trim(),name:String(input.name||'').trim(),url:String(input.url||'').trim(),username:String(input.username||''),secret:String(input.secret||''),kind:input.kind==='api_key'?'api_key':'password',public:input.public===true,has_2fa:input.has_2fa===true,memo:String(input.memo||''),updated_at:new Date().toISOString()};
  if(!a.name||!a.category||!a.secret||Object.values(a).some(v=>typeof v==='string'&&v.length>20000))return json({error:'분류, 이름, 비밀번호/API 키를 확인해 주세요.'},400);
  if(a.url&&!/^https?:\/\//i.test(a.url))return json({error:'URL은 https:// 또는 http://로 시작해야 합니다.'},400);
  if(isDemo()){if(input.id&&!demo.accounts.some(x=>x.id===input.id))return json({error:'계정을 찾을 수 없습니다.'},404);const row={...a,id:input.id||crypto.randomUUID()} as Account;demo.accounts=demo.accounts.filter(x=>x.id!==row.id).concat(row);}

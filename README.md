@@ -21,7 +21,7 @@ http://localhost:3000 · 관리자 /admin
 
 ## Supabase 연결
 
-1. Supabase 프로젝트를 만들고 `supabase/migrations/001_vault.sql`을 SQL Editor에서 실행합니다.
+1. Supabase 프로젝트를 만들고 `supabase/migrations/`의 SQL을 파일명 순서대로 SQL Editor에서 실행합니다. 기존 설치는 아직 실행하지 않은 마이그레이션만 적용합니다.
 2. `.env.example`을 `.env.local`로 복사합니다.
 3. `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 입력합니다. 키 항목에는 Supabase의 서버용 Secret key (`sb_secret_...`)를 사용합니다.
 4. `openssl rand -hex 32`로 만든 값을 `VAULT_ENCRYPTION_KEY`에 입력합니다.
@@ -39,6 +39,7 @@ http://localhost:3000 · 관리자 /admin
 - 코드 삭제 시 연결된 세션 삭제. 매 API 요청마다 코드의 권한·만료 확인.
 - 목록은 1분마다, 브라우저 포커스를 얻을 때 갱신. 이미 내려받은 정보는 회수 불가.
 - 계정 추가·수정·삭제, 분류 입력, 공개 여부 토글, 메모, 검색·필터.
+- 계정 편집에서 2차 인증 사용 여부 설정. 사용 중인 계정 이름 옆에 아이콘 없는 `2FA` 배지 표시. 실제 OTP 인증이나 비밀키 보관 기능은 아닙니다.
 - 필터된 목록 CSV: BOM, CSV 이스케이프, 수식 주입 방지, 한국 날짜 파일명.
 - CSV에는 비밀값이 포함됩니다. 권한 내 계정만 내보냅니다.
 - 비밀값 AES-256-GCM 암호화. 접근 코드 SHA-256 해시, 관리자 bcrypt.
