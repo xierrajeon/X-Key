@@ -3,21 +3,24 @@ import { accounts, db, isDemo, logout, session, startSession, throttle } from '@
 import { demo } from '@/lib/demo';
 import { encrypt, hash, newCode } from '@/lib/crypto';
 import type { Account } from '@/lib/types';
+import { isSameOrigin } from '@/lib/origin';
+import { appUrl } from '@/lib/app-url';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const json=(value:unknown,status=200)=>NextResponse.json(value,{status,headers:{'Cache-Control':'no-store'}});
 export async function GET(req:NextRequest) {
  try {
+ const publicUrl=appUrl(req.nextUrl.origin);
  const admin=req.nextUrl.searchParams.get('admin')==='1', identity=await session(admin);
- if(!identity) return json({identity:null,demo:isDemo()});
- if(identity.must_change) return json({identity,demo:isDemo(),accounts:[],codes:[]});
+ if(!identity) return json({identity:null,demo:isDemo(),publicUrl});
+ if(identity.must_change) return json({identity,demo:isDemo(),publicUrl,accounts:[],codes:[]});
  const list=await accounts(identity);
  const codes=admin?(isDemo()?demo.codes:(await db().from('xkey_codes').select('id,label,scope,expires_at,last_used_at,uses,created_at').order('created_at',{ascending:false}).throwOnError()).data):[];
- return json({identity,accounts:list,codes:codes.map(({...c})=>({id:c.id,label:c.label,scope:c.scope,expires_at:c.expires_at,last_used_at:c.last_used_at,uses:c.uses,created_at:c.created_at})),demo:isDemo()});
- } catch {return json({error:'데이터를 불러오지 못했습니다. 서버의 Supabase 설정과 마이그레이션을 확인하세요.'},503);}
+ return json({identity,publicUrl,accounts:list,codes:codes.map(({...c})=>({id:c.id,label:c.label,scope:c.scope,expires_at:c.expires_at,last_used_at:c.last_used_at,uses:c.uses,created_at:c.created_at})),demo:isDemo()});
+ } catch {return json({error:'데이터를 불러오지 못했습니다. 서버의 APP_URL·Supabase 설정과 마이그레이션을 확인하세요.'},503);}
 }
 export async function POST(req:NextRequest) {
- if(req.headers.get('origin')!==req.nextUrl.origin) return json({error:'허용되지 않은 요청입니다.'},403);
+ if(!isSameOrigin(req.headers, req.nextUrl.protocol, process.env.APP_URL)) return json({error:'허용되지 않은 요청입니다.'},403);
  try {
  const body=await req.json(), {action}=body;
  if(action==='login'||action==='unlock') {
@@ -39,7 +42,7 @@ export async function POST(req:NextRequest) {
  const identity=await session(true);
  if(!identity) return json({error:'관리자 로그인이 필요합니다.'},401);
  if(action==='change-admin') {
- const u=String(body.username||'').trim(),p=String(body.password||''),current=String(body.current||'');
+ const u=String(body.username||'').trim(),p=String(body.newPassword??body.password??''),current=String(body.currentPassword??body.current??'');
  if(!u||u.length>80||p.length<8||p.length>72) return json({error:'아이디와 8~72자의 새 비밀번호를 입력해 주세요.'},400);
  if(!await throttle('change-admin'))return json({error:'잠시 후 다시 시도해 주세요.'},429);
  const valid=isDemo()?current===demo.admin.password:(await db().rpc('xkey_verify_admin',{u:identity.label,p:current}).throwOnError()).data;

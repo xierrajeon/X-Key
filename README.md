@@ -23,7 +23,7 @@ http://localhost:3000 · 관리자 /admin
 
 1. Supabase 프로젝트를 만들고 `supabase/migrations/001_vault.sql`을 SQL Editor에서 실행합니다.
 2. `.env.example`을 `.env.local`로 복사합니다.
-3. `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 입력합니다.
+3. `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 입력합니다. 키 항목에는 Supabase의 서버용 Secret key (`sb_secret_...`)를 사용합니다.
 4. `openssl rand -hex 32`로 만든 값을 `VAULT_ENCRYPTION_KEY`에 입력합니다.
 5. 개발 서버를 재시작하고 /admin에서 `admin / admin`으로 로그인하여 변경합니다.
 6. 계정을 등록하고 접근 코드를 발급해 각각 대상자에게 전달합니다.
@@ -50,7 +50,31 @@ http://localhost:3000 · 관리자 /admin
 
 ## 배포
 
-Vercel 등에 이 폴더를 Next.js 프로젝트로 등록하고 같은 3개 환경변수를 설정합니다.
+각 사용자는 자신의 Supabase 프로젝트와 웹 호스팅을 준비합니다. 이 저장소에는 공용 DB나 배포 주소가 포함되지 않습니다.
+
+1. Vercel 등 **Next.js 서버 기능을 지원하는 호스팅**에 이 저장소를 등록합니다. 정적 파일 전용 호스팅은 사용할 수 없습니다.
+2. Supabase 연결에 필요한 환경변수 3개를 호스팅 관리 화면에 등록합니다.
+3. 호스팅에서 발급한 주소를 `APP_URL`에 입력합니다. 로컬에서 같은 설정을 사용하려면 `.env.local`에도 입력합니다.
+4. 환경변수를 저장한 뒤 재배포합니다. 로컬 개발 서버는 재시작합니다.
+5. `배포주소/admin`으로 접속해 초기 관리자 계정을 설정합니다.
+
+```dotenv
+APP_URL=https://your-x-key.example.com
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_key
+VAULT_ENCRYPTION_KEY=your_64_character_hex_key
+```
+
+`APP_URL`에는 `/admin` 같은 경로 없이 사이트의 기본 주소를 입력합니다.
+열람 링크 복사는 이 주소를 사용하며, 운영 환경의 변경 요청도 이 주소를 기준으로 검증합니다.
+사용자 지정 도메인으로 바꾸면 `APP_URL`을 수정하고 재배포하세요.
+운영 환경에서 `APP_URL`이 비어 있으면 설정 오류가 표시됩니다.
+
+개발 환경에서는 `APP_URL`을 생략할 수 있습니다. 내부망으로 개발 화면에 접속한다면
+`DEV_ALLOWED_ORIGINS=192.168.0.29`처럼 본인의 개발 PC 호스트를 `.env.local`에 설정하세요.
+여러 호스트는 쉼표로 구분하며 `http://`와 포트는 넣지 않습니다.
+
+환경변수 파일은 Git에 올리지 않고 `.env.example`만 공유합니다.
 **공유 전에 관리자가 먼저 초기 비밀번호를 변경하세요.** 누구나 아는 초기 비밀번호 상태로
 공개해 두면 다른 사람이 먼저 관리자 계정을 사용할 수 있습니다.
 프로젝트 외부 회원가입이나 별도 서버 설치는 필요 없습니다.

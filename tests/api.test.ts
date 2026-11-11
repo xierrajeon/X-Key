@@ -15,7 +15,7 @@ test('access boundaries, setup guard, code revocation and seven-day lifetime', {
  const admin=await post('login',{username:'admin',password:'admin'});assert.equal(admin.status,200);
  assert.equal((await get(true,admin.cookie)).identity.must_change,true);
  assert.equal((await post('create-code',{label:'blocked'},admin.cookie)).status,403);
- const changed=await post('change-admin',{username:'admin',current:'admin',password:'test-password-2026'},admin.cookie);assert.equal(changed.status,200);
+ const changed=await post('change-admin',{username:'admin',currentPassword:'admin',newPassword:'test-password-2026'},admin.cookie);assert.equal(changed.status,200);
  assert.equal((await get(true,admin.cookie)).identity,null);
  const full=await get(true,changed.cookie);assert.ok(full.accounts.some((a:{public:boolean})=>!a.public));
  const code=await post('create-code',{label:'Boundary test',scope:'public'},changed.cookie);assert.equal(code.status,200);
